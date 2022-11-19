@@ -1,76 +1,59 @@
 import Searchbar from 'components/Searchbar/Searchbar';
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './Button/Button';
 import ImageGallery from './ImageGallery/ImageGallery';
 import { Loader } from 'components/Loader/Loader';
 import { EmptyList, MainContainer } from './App.styled';
 import { fetchAPI } from '../Services/FetchAPI';
 
-export class App extends Component {
-  state = {
-    searchQuery: '',
-    responseArray: [],
-    queryPage: 0,
-    loading: false,
-    error: null,
-    lastPage: false,
-    status: 'idle',
-  };
+export default function App() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [responseArray, setResponseArray] = useState([]);
+  const [queryPage, setQueryPage] = useState(0);
+  const [error, setError] = useState(null);
+  const [maxPageNumber, setMaxPageNumber] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  async componentDidUpdate(_, prevState) {
-    const { queryPage, searchQuery } = this.state;
-
-    if (
-      prevState.searchQuery !== searchQuery ||
-      prevState.queryPage !== queryPage
-    ) {
-      this.setState({ status: 'pending' });
-
+  useEffect(() => {
+    async function fetchImages() {
       try {
+        if (searchQuery === '') return;
+        setLoading(true);
         const data = await fetchAPI(searchQuery, queryPage);
-
-        this.setState(prevState => ({
-          responseArray: [...prevState.responseArray, ...data.hits],
-        }));
-
-        if (queryPage === Math.ceil(data.totalHits / 12)) {
-          this.setState({ lastPage: true });
-        }
+        setResponseArray(prevState => [...prevState, ...data.hits]);
+        setLoading(false);
+        setMaxPageNumber(Math.ceil(data.totalHits / 12));
       } catch (error) {
-        this.setState({ error: true, status: 'rejected' });
-      } finally {
-        this.setState({ status: 'resolved' });
+        setError(true);
+        setLoading(false);
       }
     }
-  }
+    fetchImages();
+  }, [searchQuery, queryPage]);
 
-  handleSearchQueryChange = searchQuery => {
-    this.setState({ searchQuery, queryPage: 1, responseArray: [] });
+  const handleSearchQueryChange = searchQuery => {
+    setSearchQuery(searchQuery);
+    setQueryPage(1);
+    setResponseArray([]);
   };
 
-  onLoadMore = () => {
-    this.setState(prevState => {
-      return { queryPage: prevState.queryPage + 1 };
-    });
+  const onLoadMore = () => {
+    setQueryPage(prevState => prevState + 1);
   };
 
-  render() {
-    const { queryPage, responseArray, error, lastPage, status } = this.state;
-
-    return (
-      <MainContainer>
-        <Searchbar onSubmit={this.handleSearchQueryChange} />
-        {status === 'pending' && <Loader />}
-        {queryPage ? (
-          <ImageGallery responseArray={responseArray} />
-        ) : (
-          <EmptyList>You haven't made your first request yet</EmptyList>
-        )}
-        {status === 'rejected' && <EmptyList>{error.message}</EmptyList>}
-        {!lastPage && status === 'resolved' && (
-          <Button onClick={this.onLoadMore}>Load more</Button>
-        )}
-      </MainContainer>
-    );
-  }
+  return (
+    <MainContainer>
+      <Searchbar onSubmit={handleSearchQueryChange} />
+      {loading && <Loader />}
+      {queryPage ? (
+        <ImageGallery responseArray={responseArray} />
+      ) : (
+        <EmptyList>You haven't made your first request yet</EmptyList>
+      )}
+      {error && <EmptyList>{error.message}</EmptyList>}
+      {queryPage !== maxPageNumber && !loading && (
+        <Button onClick={onLoadMore}>Load more</Button>
+      )}
+    </MainContainer>
+  );
 }
