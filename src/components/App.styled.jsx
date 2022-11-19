@@ -7,13 +7,3 @@ export const MainContainer = styled.div`
   padding-bottom: 24px;
   position: relative;
 `;
-
-export const EmptyList = styled.p`
-  display: flex;
-  margin-left: auto;
-  margin-right: auto;
-  width: 600px;
-  height: 100px;
-  font-size: 24px;
-  justify-content: center;
-`;
